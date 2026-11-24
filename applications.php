@@ -1,0 +1,10 @@
+<?php
+require_once __DIR__.'/config/app.php'; $user=require_role(['admin','employer']); $EMS_WITH_SIDEBAR=true;
+require_once __DIR__.'/includes/layout.php'; page_header('Applications',$user); echo flash();
+
+if($_SERVER['REQUEST_METHOD']==='POST') { verify_csrf(); $id=(int)$_POST['application_id']; $status=$_POST['status']; if(in_array($status,['pending','reviewed','accepted','rejected'],true)){ $s=$pdo->prepare('UPDATE applications SET status=? WHERE id=?'); $s->execute([$status,$id]); flash('Application status updated.'); }}
+
+if($user['role']==='employer'){$s=$pdo->prepare('SELECT a.*,j.title,u.name applicant,u.email FROM applications a JOIN jobs j ON j.id=a.job_id JOIN employers e ON e.id=j.employer_id JOIN users u ON u.id=a.applicant_id WHERE e.user_id=? ORDER BY a.created_at DESC');$s->execute([$user['id']]);}else{$s=$pdo->query('SELECT a.*,j.title,u.name applicant,u.email FROM applications a JOIN jobs j ON j.id=a.job_id JOIN users u ON u.id=a.applicant_id ORDER BY a.created_at DESC');}
+?>
+<div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>Applicant</th><th>Email</th><th>Job</th><th>Status</th><th>Update</th></tr></thead><tbody><?php foreach($s as $row): ?><tr><td><?=htmlspecialchars($row['applicant'])?></td><td><?=htmlspecialchars($row['email'])?></td><td><?=htmlspecialchars($row['title'])?></td><td><span class="badge text-bg-secondary"><?=htmlspecialchars(ucfirst($row['status']))?></span></td><td><form method="post" class="d-flex gap-2"><input type="hidden" name="csrf" value="<?=csrf_token()?>"><input type="hidden" name="application_id" value="<?=$row['id']?>"><select class="form-select form-select-sm" name="status"><option value="pending">Pending</option><option value="reviewed">Reviewed</option><option value="accepted">Accepted</option><option value="rejected">Rejected</option></select><button class="btn btn-primary btn-sm">Save</button></form></td></tr><?php endforeach ?></tbody></table></div>
+<?php page_footer(); ?>
